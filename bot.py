@@ -46,16 +46,14 @@ None:
         context.user_data["opcion"] = opcion  # Guardar la opción 
 seleccionada
     elif opcion == "🎥 Video personalizado":
-        await update.message.reply_text("Escribe el mensaje que quieres en 
-el video")
+        await update.message.reply_text("Escribe el mensaje que quieres en el video")
         context.user_data["opcion"] = opcion
     else:
         equipo = context.user_data.get("equipo", "N/A")
         mensaje = context.user_data.get("mensaje", "N/A")
         sheet.append_row([usuario, context.user_data["opcion"], equipo, 
 "N/A", mensaje, fecha])
-        await update.message.reply_text("✅ Petición registrada. Nos 
-pondremos en contacto contigo para completar el pago.")
+        await update.message.reply_text("✅ Petición registrada. Nos pondremos en contacto contigo para completar el pago.")
         context.user_data.clear()
 
 # 🔹 Capturar equipo favorito
@@ -75,16 +73,14 @@ async def capturar_tipo_servicio(update: Update, context: CallbackContext)
     fecha = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     sheet.append_row([usuario, opcion, equipo, servicio, "N/A", fecha])
-    await update.message.reply_text("✅ Petición registrada. Nos pondremos 
-en contacto contigo para completar el pago.")
+    await update.message.reply_text("✅ Petición registrada. Nos pondremos en contacto contigo para completar el pago.")
     context.user_data.clear()
 
 # 🔹 Capturar mensaje para video personalizado
 async def capturar_mensaje(update: Update, context: CallbackContext) -> 
 None:
     context.user_data["mensaje"] = update.message.text
-    await update.message.reply_text("¿El video es para ti o para un 
-amigo?")
+    await update.message.reply_text("¿El video es para ti o para un amigo?")
 
 # 🔹 Configurar el bot
 def main():
