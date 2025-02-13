@@ -52,14 +52,12 @@ async def manejar_respuesta(update: Update, context: CallbackContext) -> None:
         context.user_data.clear()
 
 # 🔹 Capturar equipo favorito
-async def capturar_equipo(update: Update, context: CallbackContext) ->
-None:
+async def capturar_equipo(update: Update, context: CallbackContext) -> None:
     context.user_data["equipo"] = update.message.text
     await update.message.reply_text("¿Qué tipo de servicio quieres? (Soft $20 / Hard $40)")
 
 # 🔹 Capturar tipo de servicio
-async def capturar_tipo_servicio(update: Update, context: CallbackContext)
--> None:
+async def capturar_tipo_servicio(update: Update, context: CallbackContext) -> None:
     usuario = update.message.chat.username or update.message.chat.id
     opcion = context.user_data.get("opcion", "N/A")
     equipo = context.user_data.get("equipo", "N/A")
@@ -71,8 +69,7 @@ async def capturar_tipo_servicio(update: Update, context: CallbackContext)
     context.user_data.clear()
 
 # 🔹 Capturar mensaje para video personalizado
-async def capturar_mensaje(update: Update, context: CallbackContext) ->
-None:
+async def capturar_mensaje(update: Update, context: CallbackContext) -> None:
     context.user_data["mensaje"] = update.message.text
     await update.message.reply_text("¿El video es para ti o para un amigo?")
 
