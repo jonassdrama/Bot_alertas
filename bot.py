@@ -60,8 +60,7 @@ seleccionada
 async def capturar_equipo(update: Update, context: CallbackContext) -> 
 None:
     context.user_data["equipo"] = update.message.text
-    await update.message.reply_text("¿Qué tipo de servicio quieres? (Soft 
-$20 / Hard $40)")
+    await update.message.reply_text("¿Qué tipo de servicio quieres? (Soft $20 / Hard $40)")
 
 # 🔹 Capturar tipo de servicio
 async def capturar_tipo_servicio(update: Update, context: CallbackContext) 
