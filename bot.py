@@ -42,64 +42,82 @@ None:
     opcion = update.message.text
     fecha = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    if opcion == "📢 Servicio 1 mes" or opcion == "📢 Servicio 1 año":
+    if opcion in ["📢 Servicio 1 mes", "📢 Servicio 1 año"]:
         await update.message.reply_text("¿Cuál es tu equipo favorito?")
         context.user_data["opcion"] = opcion  # Guardar la opción 
 seleccionada
-    elif opcion == "🎥 Video personalizado":
+        return
+    
+    if opcion == "🎥 Video personalizado":
         await update.message.reply_text("Escribe el mensaje que quieres en 
-el video")
+el video:")
         context.user_data["opcion"] = opcion
-    else:
-        equipo = context.user_data.get("equipo", "N/A")
-        mensaje = context.user_data.get("mensaje", "N/A")
-        sheet.append_row([usuario, context.user_data["opcion"], equipo, 
-"N/A", mensaje, fecha])
-        await update.message.reply_text("✅ Petición registrada. Nos 
-pondremos en contacto contigo para completar el pago.")
-        context.user_data.clear()
+        return
 
 # 🔹 Capturar equipo favorito
 async def capturar_equipo(update: Update, context: CallbackContext) -> 
 None:
-    context.user_data["equipo"] = update.message.text
-    await update.message.reply_text("¿Qué tipo de servicio quieres? (Soft 
-$20 / Hard $40)")
+    if "opcion" in context.user_data:
+        context.user_data["equipo"] = update.message.text
+        await update.message.reply_text("¿Qué tipo de servicio quieres? 
+(Soft $20 / Hard $40)")
 
 # 🔹 Capturar tipo de servicio
 async def capturar_tipo_servicio(update: Update, context: CallbackContext) 
 -> None:
-    usuario = update.message.chat.username or update.message.chat.id
-    opcion = context.user_data.get("opcion", "N/A")
-    equipo = context.user_data.get("equipo", "N/A")
-    servicio = update.message.text
-    fecha = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    if "opcion" in context.user_data and "equipo" in context.user_data:
+        usuario = update.message.chat.username or update.message.chat.id
+        opcion = context.user_data["opcion"]
+        equipo = context.user_data["equipo"]
+        servicio = update.message.text
+        fecha = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    sheet.append_row([usuario, opcion, equipo, servicio, "N/A", fecha])
-    await update.message.reply_text("✅ Petición registrada. Nos pondremos 
-en contacto contigo para completar el pago.")
-    context.user_data.clear()
+        sheet.append_row([usuario, opcion, equipo, servicio, "N/A", 
+fecha])
+        await update.message.reply_text("✅ Petición registrada. Nos 
+pondremos en contacto contigo para completar el pago.")
+        context.user_data.clear()
 
 # 🔹 Capturar mensaje para video personalizado
 async def capturar_mensaje(update: Update, context: CallbackContext) -> 
 None:
-    context.user_data["mensaje"] = update.message.text
-    await update.message.reply_text("¿El video es para ti o para un 
+    if "opcion" in context.user_data and context.user_data["opcion"] == 
+"🎥 Video personalizado":
+        context.user_data["mensaje"] = update.message.text
+        await update.message.reply_text("¿El video es para ti o para un 
 amigo?")
+
+# 🔹 Capturar destinatario del video personalizado
+async def capturar_destinatario(update: Update, context: CallbackContext) 
+-> None:
+    if "mensaje" in context.user_data:
+        usuario = update.message.chat.username or update.message.chat.id
+        opcion = context.user_data["opcion"]
+        mensaje = context.user_data["mensaje"]
+        destinatario = update.message.text
+        fecha = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        sheet.append_row([usuario, opcion, "N/A", "N/A", f"Para: 
+{destinatario}, Mensaje: {mensaje}", fecha])
+        await update.message.reply_text("✅ Petición registrada. Nos 
+pondremos en contacto contigo para completar el pago.")
+        context.user_data.clear()
 
 # 🔹 Configurar el bot
 def main():
     app = Application.builder().token(TOKEN).build()
-    
+
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, 
-manejar_respuesta))
+    app.add_handler(MessageHandler(filters.Regex("📢 Servicio 1 mes|📢 
+Servicio 1 año|🎥 Video personalizado"), manejar_respuesta))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, 
 capturar_equipo))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, 
+    app.add_handler(MessageHandler(filters.Regex("Soft \$20|Hard \$40"), 
 capturar_tipo_servicio))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, 
 capturar_mensaje))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, 
+capturar_destinatario))
 
     print("🤖 Bot en marcha...")
     app.run_polling()
