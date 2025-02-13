@@ -3,8 +3,7 @@ import os
 import datetime
 from oauth2client.service_account import ServiceAccountCredentials
 from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, 
-filters, CallbackContext
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 
 # 🔹 Configurar el bot de Telegram
 TOKEN = "7287863294:AAFiMdZMWBvZYfsts44s2Ig_AkycNKh5HFU"
