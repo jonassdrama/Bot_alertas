@@ -27,7 +27,7 @@ SERVICIOS = [
 
 # 🔹 Comando /start
 async def start(update: Update, context: CallbackContext) -> None:
-    keyboard = ReplyKeyboardMarkup(SERVICIOS, one_time_keyboard=True, 
+    keyboard = ReplyKeyboardMarkup(SERVICIOS, one_time_keyboard=True,
 resize_keyboard=True)
     await update.message.reply_text("¡Bienvenido! 📢 Elige una opción de alertas deportivas:", reply_markup=keyboard)
 
