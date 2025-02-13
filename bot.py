@@ -32,16 +32,14 @@ resize_keyboard=True)
     await update.message.reply_text("¡Bienvenido! 📢 Elige una opción de alertas deportivas:", reply_markup=keyboard)
 
 # 🔹 Manejar respuestas del usuario
-async def manejar_respuesta(update: Update, context: CallbackContext) ->
-None:
+async def manejar_respuesta(update: Update, context: CallbackContext) -> None:
     usuario = update.message.chat.username or update.message.chat.id
     opcion = update.message.text
     fecha = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     if opcion == "📢 Servicio 1 mes" or opcion == "📢 Servicio 1 año":
         await update.message.reply_text("¿Cuál es tu equipo favorito?")
-        context.user_data["opcion"] = opcion  # Guardar la opción
-seleccionada
+        context.user_data["opcion"] = opcion  # Guardar la opción seleccionada
     elif opcion == "🎥 Video personalizado":
         await update.message.reply_text("Escribe el mensaje que quieres en el video")
         context.user_data["opcion"] = opcion
