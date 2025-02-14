@@ -81,9 +81,6 @@ async def capturar_equipo(update: Update, context: CallbackContext) -> None:
     context.user_data["equipo"] = update.message.text
     idioma = context.user_data.get("idioma", "🇪🇸 Español")
 
-    mensaje = "¿Qué tipo de servicio quieres? (Soft $20 / Hard $40)" if idioma == "🇪🇸 Español" else "What type of service do you want? (Soft $20 / Hard $40)"
-    await update.message.reply_text(mensaje)
-
 # 🔹 Capturar mensaje para video personalizado
 async def capturar_mensaje(update: Update, context: CallbackContext) -> None:
     context.user_data["mensaje"] = update.message.text
