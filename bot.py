@@ -24,56 +24,73 @@ sheet = client.open_by_key(SHEET_NAME).sheet1
 
 # 🔹 Opciones
 IDIOMAS = [["🇪🇸 Español", "🇬🇧 English"]]
-SERVICIOS = [["📢 Servicio 1 mes - $20"], ["📢 Servicio 1 año - $100"], ["🎥 Video personalizado - $30"]]
+SERVICIOS_ESP = [["📢 Servicio 1 mes - $20"], ["📢 Servicio 1 año - $100"], ["🎥 Video personalizado - $30"]]
+SERVICIOS_ENG = [["📢 1-month service - $20"], ["📢 1-year service - $100"], ["🎥 Custom video - $30"]]
 
-# 🔹 Botón "Empezar"
-async def start(update: Update, context: CallbackContext) -> None:
+# 🔹 Botón "Empezar" al entrar al bot
+async def mostrar_boton_empezar(update: Update, context: CallbackContext) -> None:
     keyboard = ReplyKeyboardMarkup([["🚀 Empezar"]], one_time_keyboard=True, resize_keyboard=True)
-    await update.message.reply_text("¡Bienvenido! Presiona el botón para comenzar.", reply_markup=keyboard)
+    await update.message.reply_text("¡Bienvenido! / Welcome! 👋", reply_markup=keyboard)
 
 # 🔹 Manejar "Empezar"
 async def empezar(update: Update, context: CallbackContext) -> None:
     keyboard = ReplyKeyboardMarkup(IDIOMAS, one_time_keyboard=True, resize_keyboard=True)
     await update.message.reply_text("🌍 Elige tu idioma / Choose your language:", reply_markup=keyboard)
 
-# 🔹 Seleccionar idioma
+# 🔹 Seleccionar idioma y mostrar opciones correctas
 async def seleccionar_idioma(update: Update, context: CallbackContext) -> None:
     idioma = update.message.text
     context.user_data["idioma"] = idioma
     
-    mensaje = "📢 Elige una opción de alertas deportivas:" if idioma == "🇪🇸 Español" else "📢 Choose a sports alerts option:"
-    
-    keyboard = ReplyKeyboardMarkup(SERVICIOS, one_time_keyboard=True, resize_keyboard=True)
+    if idioma == "🇪🇸 Español":
+        mensaje = "📢 Elige una opción de alertas deportivas:"
+        keyboard = ReplyKeyboardMarkup(SERVICIOS_ESP, one_time_keyboard=True, resize_keyboard=True)
+    else:
+        mensaje = "📢 Choose a sports alerts option:"
+        keyboard = ReplyKeyboardMarkup(SERVICIOS_ENG, one_time_keyboard=True, resize_keyboard=True)
+
     await update.message.reply_text(mensaje, reply_markup=keyboard)
 
-# 🔹 Manejar selección de servicio
+# 🔹 Manejar selección de servicio y preguntar en el idioma correcto
 async def manejar_respuesta(update: Update, context: CallbackContext) -> None:
     opcion = update.message.text
     context.user_data["opcion"] = opcion
+    idioma = context.user_data.get("idioma", "🇪🇸 Español")
     
-    if "Servicio" in opcion:
-        mensaje = "⚽ ¿Cuál es tu equipo favorito?"
-        context.user_data["estado"] = "esperando_equipo"
-    
-    elif "Video personalizado" in opcion:
-        mensaje = "🎥 Escribe el mensaje que quieres en el video"
-        context.user_data["estado"] = "esperando_mensaje"
+    if idioma == "🇪🇸 Español":
+        if "Servicio" in opcion:
+            mensaje = "⚽ ¿Cuál es tu equipo favorito?"
+            context.user_data["estado"] = "esperando_equipo"
+        elif "Video personalizado" in opcion:
+            mensaje = "🎥 Escribe el mensaje que quieres en el video"
+            context.user_data["estado"] = "esperando_mensaje"
+    else:
+        if "service" in opcion:
+            mensaje = "⚽ What is your favorite team?"
+            context.user_data["estado"] = "esperando_equipo"
+        elif "Custom video" in opcion:
+            mensaje = "🎥 Write the message you want in the video"
+            context.user_data["estado"] = "esperando_mensaje"
 
     await update.message.reply_text(mensaje)
 
 # 🔹 Manejar respuestas de usuario según el estado
 async def manejar_respuesta_usuario(update: Update, context: CallbackContext) -> None:
     estado = context.user_data.get("estado")
+    idioma = context.user_data.get("idioma", "🇪🇸 Español")
 
     if estado == "esperando_equipo":
         context.user_data["equipo"] = update.message.text
-        mensaje = "🎟️ ¿El video es para ti o para un amigo?"
+        mensaje = "✅ Equipo guardado." if idioma == "🇪🇸 Español" else "✅ Team saved."
         context.user_data["estado"] = "esperando_servicio"
         await update.message.reply_text(mensaje)
 
     elif estado == "esperando_mensaje":
         context.user_data["mensaje"] = update.message.text
-        mensaje = "🎟️ ¿El video es para ti o para un amigo?"
+        if idioma == "🇪🇸 Español":
+            mensaje = "🎟️ ¿El video es para ti o para un amigo?"
+        else:
+            mensaje = "🎟️ Is the video for you or a friend?"
         context.user_data["estado"] = "esperando_servicio"
         await update.message.reply_text(mensaje)
 
@@ -87,20 +104,26 @@ async def manejar_respuesta_usuario(update: Update, context: CallbackContext) ->
 
         sheet.append_row([usuario, opcion, equipo, servicio, mensaje, fecha])
 
-        idioma = context.user_data.get("idioma", "🇪🇸 Español")
-        mensaje_final = "✅ Petición registrada. Nos pondremos en contacto contigo para completar el pago." if idioma == "🇪🇸 Español" else "✅ Request registered. We will contact you to complete the payment."
+        if idioma == "🇪🇸 Español":
+            mensaje_final = "✅ Petición registrada. Nos pondremos en contacto contigo para completar el pago."
+        else:
+            mensaje_final = "✅ Request registered. We will contact you to complete the payment."
+
         await update.message.reply_text(mensaje_final)
 
         context.user_data.clear()
 
 # 🔹 Configurar manejadores
-app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("start", mostrar_boton_empezar))  # Muestra "Empezar" al entrar
 app.add_handler(MessageHandler(filters.Text(["🚀 Empezar"]), empezar))
 app.add_handler(MessageHandler(filters.Text(["🇪🇸 Español", "🇬🇧 English"]), seleccionar_idioma))
-app.add_handler(MessageHandler(filters.Text(["📢 Servicio 1 mes - $20", "📢 Servicio 1 año - $100", "🎥 Video personalizado - $30"]), manejar_respuesta))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, manejar_respuesta_usuario))  # Un solo manejador para capturar respuestas
+app.add_handler(MessageHandler(filters.Text(["📢 Servicio 1 mes - $20", "📢 Servicio 1 año - $100", "🎥 Video personalizado - $30",
+                                             "📢 1-month service - $20", "📢 1-year service - $100", "🎥 Custom video - $30"]),
+                               manejar_respuesta))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, manejar_respuesta_usuario))
 
 # 🔹 Iniciar bot
 app.run_polling()
+
 
 
