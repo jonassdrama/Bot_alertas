@@ -27,7 +27,7 @@ IDIOMAS = [["🇪🇸 Español", "🇬🇧 English"]]
 SERVICIOS_ESP = [["📢 Servicio 1 mes - $20"], ["📢 Servicio 1 año - $100"], ["🎥 Video personalizado - $30"]]
 SERVICIOS_ENG = [["📢 1-month service - $20"], ["📢 1-year service - $100"], ["🎥 Custom video - $30"]]
 
-# 🔹 Botón "Empezar" al entrar al bot
+# 🔹 Mostrar botón "Empezar" automáticamente
 async def mostrar_boton_empezar(update: Update, context: CallbackContext) -> None:
     keyboard = ReplyKeyboardMarkup([["🚀 Empezar"]], one_time_keyboard=True, resize_keyboard=True)
     await update.message.reply_text("¡Bienvenido! / Welcome! 👋", reply_markup=keyboard)
@@ -81,9 +81,7 @@ async def manejar_respuesta_usuario(update: Update, context: CallbackContext) ->
 
     if estado == "esperando_equipo":
         context.user_data["equipo"] = update.message.text
-        mensaje = "✅ Equipo guardado." if idioma == "🇪🇸 Español" else "✅ Team saved."
-        context.user_data["estado"] = "esperando_servicio"
-        await update.message.reply_text(mensaje)
+        await registrar_peticion(update, context)
 
     elif estado == "esperando_mensaje":
         context.user_data["mensaje"] = update.message.text
@@ -95,26 +93,32 @@ async def manejar_respuesta_usuario(update: Update, context: CallbackContext) ->
         await update.message.reply_text(mensaje)
 
     elif estado == "esperando_servicio":
-        usuario = update.message.chat.username or update.message.chat.id
-        opcion = context.user_data.get("opcion", "N/A")
-        equipo = context.user_data.get("equipo", "N/A")
-        servicio = update.message.text
-        mensaje = context.user_data.get("mensaje", "N/A")
-        fecha = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        context.user_data["servicio"] = update.message.text
+        await registrar_peticion(update, context)
 
-        sheet.append_row([usuario, opcion, equipo, servicio, mensaje, fecha])
+# 🔹 Registrar la petición en Google Sheets
+async def registrar_peticion(update: Update, context: CallbackContext) -> None:
+    usuario = update.message.chat.username or update.message.chat.id
+    opcion = context.user_data.get("opcion", "N/A")
+    equipo = context.user_data.get("equipo", "N/A")
+    servicio = context.user_data.get("servicio", "N/A")
+    mensaje = context.user_data.get("mensaje", "N/A")
+    fecha = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        if idioma == "🇪🇸 Español":
-            mensaje_final = "✅ Petición registrada. Nos pondremos en contacto contigo para completar el pago."
-        else:
-            mensaje_final = "✅ Request registered. We will contact you to complete the payment."
+    sheet.append_row([usuario, opcion, equipo, servicio, mensaje, fecha])
 
-        await update.message.reply_text(mensaje_final)
+    idioma = context.user_data.get("idioma", "🇪🇸 Español")
+    if idioma == "🇪🇸 Español":
+        mensaje_final = "✅ Petición registrada. Nos pondremos en contacto contigo para completar el pago."
+    else:
+        mensaje_final = "✅ Request registered. We will contact you to complete the payment."
 
-        context.user_data.clear()
+    await update.message.reply_text(mensaje_final)
+
+    context.user_data.clear()
 
 # 🔹 Configurar manejadores
-app.add_handler(CommandHandler("start", mostrar_boton_empezar))  # Muestra "Empezar" al entrar
+app.add_handler(MessageHandler(filters.ALL, mostrar_boton_empezar))  # Muestra "Empezar" automáticamente
 app.add_handler(MessageHandler(filters.Text(["🚀 Empezar"]), empezar))
 app.add_handler(MessageHandler(filters.Text(["🇪🇸 Español", "🇬🇧 English"]), seleccionar_idioma))
 app.add_handler(MessageHandler(filters.Text(["📢 Servicio 1 mes - $20", "📢 Servicio 1 año - $100", "🎥 Video personalizado - $30",
@@ -124,6 +128,7 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, manejar_respuest
 
 # 🔹 Iniciar bot
 app.run_polling()
+
 
 
 
