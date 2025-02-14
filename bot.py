@@ -1,18 +1,36 @@
 import gspread
 import os
 import datetime
+import json
 from oauth2client.service_account import ServiceAccountCredentials
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 
 # 🔹 Configurar el bot de Telegram
-TOKEN = "7287863294:AAFiMdZMWBvZYfsts44s2Ig_AkycNKh5HFU"
+TOKEN = "7287863294:AAFiMdZMWBvZYfsts44s2Ig_AkycNKh5HFU"   
+
+# 🔹 Verificar si GOOGLE_CREDENTIALS está configurado en Render
+if "GOOGLE_CREDENTIALS" not in os.environ:
+    print("❌ ERROR: GOOGLE_CREDENTIALS no está configurado en Render")
+    exit(1)  # Detiene el programa
+
+# 🔹 Cargar credenciales desde la variable de entorno
+creds_raw = os.getenv("GOOGLE_CREDENTIALS")
+if not creds_raw:
+    print("❌ ERROR: GOOGLE_CREDENTIALS está vacío")
+    exit(1)
+
+try:
+    creds_json = json.loads(creds_raw)
+    print("✅ GOOGLE_CREDENTIALS cargado correctamente")
+except json.JSONDecodeError as e:
+    print("❌ ERROR: Formato inválido en GOOGLE_CREDENTIALS:", e)
+    exit(1)
 
 # 🔹 Conectar con Google Sheets
 scope = ["https://spreadsheets.google.com/feeds",
-"https://www.googleapis.com/auth/drive"]
-import json
-creds_json = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
+         "https://www.googleapis.com/auth/drive"]
+
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_json, scope)
 client = gspread.authorize(creds)
 
