@@ -12,6 +12,7 @@ TOKEN = os.getenv("TOKEN")  # Asegúrate de que está en las variables de entorn
 if not TOKEN:
     raise ValueError("❌ ERROR: No se encontró el TOKEN de Telegram en las variables de entorno.")
 
+print(f"🟢 TOKEN cargado en Render: {TOKEN}")  # Esto imprimirá el token en los logs
 app = Application.builder().token(TOKEN).build()
 
 # 🔹 Conectar con Google Sheets
