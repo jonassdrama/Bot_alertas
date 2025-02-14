@@ -6,31 +6,9 @@ from oauth2client.service_account import ServiceAccountCredentials
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 
-# 🔹 Configurar el bot de Telegram
-TOKEN = "7287863294:AAFiMdZMWBvZYfsts44s2Ig_AkycNKh5HFU"   
-
-# 🔹 Verificar si GOOGLE_CREDENTIALS está configurado en Render
-if "GOOGLE_CREDENTIALS" not in os.environ:
-    print("❌ ERROR: GOOGLE_CREDENTIALS no está configurado en Render")
-    exit(1)  # Detiene el programa
-
-# 🔹 Cargar credenciales desde la variable de entorno
-creds_raw = os.getenv("GOOGLE_CREDENTIALS")
-if not creds_raw:
-    print("❌ ERROR: GOOGLE_CREDENTIALS está vacío")
-    exit(1)
-
-try:
-    creds_json = json.loads(creds_raw)
-    print("✅ GOOGLE_CREDENTIALS cargado correctamente")
-except json.JSONDecodeError as e:
-    print("❌ ERROR: Formato inválido en GOOGLE_CREDENTIALS:", e)
-    exit(1)
-
 # 🔹 Conectar con Google Sheets
-scope = ["https://spreadsheets.google.com/feeds",
-         "https://www.googleapis.com/auth/drive"]
-
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds_json = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
 creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_json, scope)
 client = gspread.authorize(creds)
 
@@ -38,78 +16,103 @@ client = gspread.authorize(creds)
 SHEET_NAME = "1I6zyDy7N1vqOrq_2b6MFxL7ak8M8_FZpm0Q6cw-rkpc"
 sheet = client.open_by_key(SHEET_NAME).sheet1
 
-# 🔹 Opciones del bot
+# 🔹 Opciones de idioma
+IDIOMAS = [["🇪🇸 Español", "🇬🇧 English"]]
+
+# 🔹 Opciones del bot con precios
 SERVICIOS = [
-    ["📢 Servicio 1 mes"],
-    ["📢 Servicio 1 año"],
-    ["🎥 Video personalizado"]
+    ["📢 Servicio 1 mes - $20"],
+    ["📢 Servicio 1 año - $100"],
+    ["🎥 Video personalizado - $30"]
 ]
 
-# 🔹 Comando /start
+# 🔹 Botón "Empezar"
 async def start(update: Update, context: CallbackContext) -> None:
-    keyboard = ReplyKeyboardMarkup(SERVICIOS, one_time_keyboard=True,
-resize_keyboard=True)
-    await update.message.reply_text("¡Bienvenido! 📢 Elige una opción de alertas deportivas:", reply_markup=keyboard)
+    keyboard = ReplyKeyboardMarkup([["🚀 Empezar"]], one_time_keyboard=True, resize_keyboard=True)
+    await update.message.reply_text("¡Bienvenido! Presiona el botón para comenzar.", reply_markup=keyboard)
+
+# 🔹 Manejar el botón "Empezar"
+async def empezar(update: Update, context: CallbackContext) -> None:
+    keyboard = ReplyKeyboardMarkup(IDIOMAS, one_time_keyboard=True, resize_keyboard=True)
+    await update.message.reply_text("🌍 Elige tu idioma / Choose your language:", reply_markup=keyboard)
+
+# 🔹 Manejar selección de idioma
+async def seleccionar_idioma(update: Update, context: CallbackContext) -> None:
+    idioma = update.message.text
+    context.user_data["idioma"] = idioma
+    
+    if idioma == "🇪🇸 Español":
+        mensaje = "📢 Elige una opción de alertas deportivas:"
+    else:
+        mensaje = "📢 Choose a sports alerts option:"
+    
+    keyboard = ReplyKeyboardMarkup(SERVICIOS, one_time_keyboard=True, resize_keyboard=True)
+    await update.message.reply_text(mensaje, reply_markup=keyboard)
 
 # 🔹 Manejar respuestas del usuario
 async def manejar_respuesta(update: Update, context: CallbackContext) -> None:
     usuario = update.message.chat.username or update.message.chat.id
     opcion = update.message.text
     fecha = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    idioma = context.user_data.get("idioma", "🇪🇸 Español")  # Idioma por defecto español
 
-    if opcion == "📢 Servicio 1 mes" or opcion == "📢 Servicio 1 año":
-        await update.message.reply_text("¿Cuál es tu equipo favorito?")
-        context.user_data["opcion"] = opcion  # Guardar la opción seleccionada
-    elif opcion == "🎥 Video personalizado":
-        await update.message.reply_text("Escribe el mensaje que quieres en el video")
+    if "Servicio 1 mes" in opcion or "Servicio 1 año" in opcion:
+        mensaje = "¿Cuál es tu equipo favorito?" if idioma == "🇪🇸 Español" else "What is your favorite team?"
+        await update.message.reply_text(mensaje)
         context.user_data["opcion"] = opcion
-    else:
-        equipo = context.user_data.get("equipo", "N/A")
-        mensaje = context.user_data.get("mensaje", "N/A")
-        sheet.append_row([usuario, context.user_data["opcion"], equipo,
-"N/A", mensaje, fecha])
-        await update.message.reply_text("✅ Petición registrada. Nos pondremos en contacto contigo para completar el pago.")
-        context.user_data.clear()
+    
+    elif "Video personalizado" in opcion:
+        mensaje = "Escribe el mensaje que quieres en el video" if idioma == "🇪🇸 Español" else "Write the message you want in the video"
+        await update.message.reply_text(mensaje)
+        context.user_data["opcion"] = opcion
 
 # 🔹 Capturar equipo favorito
 async def capturar_equipo(update: Update, context: CallbackContext) -> None:
     context.user_data["equipo"] = update.message.text
-    await update.message.reply_text("¿Qué tipo de servicio quieres? (Soft $20 / Hard $40)")
+    idioma = context.user_data.get("idioma", "🇪🇸 Español")
 
-# 🔹 Capturar tipo de servicio
+    mensaje = "¿Qué tipo de servicio quieres? (Soft $20 / Hard $40)" if idioma == "🇪🇸 Español" else "What type of service do you want? (Soft $20 / Hard $40)"
+    await update.message.reply_text(mensaje)
+
+# 🔹 Capturar mensaje para video personalizado
+async def capturar_mensaje(update: Update, context: CallbackContext) -> None:
+    context.user_data["mensaje"] = update.message.text
+    idioma = context.user_data.get("idioma", "🇪🇸 Español")
+
+    mensaje = "¿El video es para ti o para un amigo?" if idioma == "🇪🇸 Español" else "Is the video for you or a friend?"
+    await update.message.reply_text(mensaje)
+
+# 🔹 Capturar tipo de servicio y registrar en Google Sheets
 async def capturar_tipo_servicio(update: Update, context: CallbackContext) -> None:
     usuario = update.message.chat.username or update.message.chat.id
     opcion = context.user_data.get("opcion", "N/A")
     equipo = context.user_data.get("equipo", "N/A")
     servicio = update.message.text
+    mensaje = context.user_data.get("mensaje", "N/A")
     fecha = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    sheet.append_row([usuario, opcion, equipo, servicio, "N/A", fecha])
-    await update.message.reply_text("✅ Petición registrada. Nos pondremos en contacto contigo para completar el pago.")
+    sheet.append_row([usuario, opcion, equipo, servicio, mensaje, fecha])
+
+    idioma = context.user_data.get("idioma", "🇪🇸 Español")
+    mensaje_final = "✅ Petición registrada. Nos pondremos en contacto contigo para completar el pago." if idioma == "🇪🇸 Español" else "✅ Request registered. We will contact 
+you to complete the payment."
+    await update.message.reply_text(mensaje_final)
+
     context.user_data.clear()
 
-# 🔹 Capturar mensaje para video personalizado
-async def capturar_mensaje(update: Update, context: CallbackContext) -> None:
-    context.user_data["mensaje"] = update.message.text
-    await update.message.reply_text("¿El video es para ti o para un amigo?")
+# 🔹 Configurar el bot de Telegram
+TOKEN = os.getenv("TOKEN")  # Asegúrate de que está en las variables de entorno
+app = Application.builder().token(TOKEN).build()
 
-# 🔹 Configurar el bot
-def main():
-    app = Application.builder().token(TOKEN).build()
+# 🔹 Manejo de comandos
+app.add_handler(CommandHandler("start", start))
+app.add_handler(MessageHandler(filters.Text(["🚀 Empezar"]), empezar))
+app.add_handler(MessageHandler(filters.Text(["🇪🇸 Español", "🇬🇧 English"]), seleccionar_idioma))
+app.add_handler(MessageHandler(filters.Text(["📢 Servicio 1 mes - $20", "📢 Servicio 1 año - $100", "🎥 Video personalizado - $30"]), manejar_respuesta))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, capturar_equipo))  # Captura el equipo
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, capturar_mensaje))  # Captura mensaje del video
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, capturar_tipo_servicio))  # Captura tipo de servicio y registra
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND,
-manejar_respuesta))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND,
-capturar_equipo))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND,
-capturar_tipo_servicio))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND,
-capturar_mensaje))
-
-    print("🤖 Bot en marcha...")
-    app.run_polling()
-
-if __name__ == "__main__":
-    main()
+# 🔹 Iniciar el bot
+app.run_polling()
 
