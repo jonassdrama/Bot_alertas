@@ -17,6 +17,7 @@ SHEET_NAME = "1I6zyDy7N1vqOrq_2b6MFxL7ak8M8_FZpm0Q6cw-rkpc"
 sheet = client.open_by_key(SHEET_NAME).sheet1
 
 # 🔹 Opciones de idioma
+# 🔹 Opciones de idioma
 IDIOMAS = [["🇪🇸 Español", "🇬🇧 English"]]
 
 # 🔹 Opciones del bot con precios
@@ -94,8 +95,7 @@ async def capturar_tipo_servicio(update: Update, context: CallbackContext) -> No
     sheet.append_row([usuario, opcion, equipo, servicio, mensaje, fecha])
 
     idioma = context.user_data.get("idioma", "🇪🇸 Español")
-    mensaje_final = "✅ Petición registrada. Nos pondremos en contacto contigo para completar el pago." if idioma == "🇪🇸 Español" else "✅ Request registered. We will contact 
-you to complete the payment."
+    mensaje_final = "✅ Petición registrada. Nos pondremos en contacto contigo para completar el pago." if idioma == "🇪🇸 Español" else "✅ Request registered. We will contacyou to complete the payment."
     await update.message.reply_text(mensaje_final)
 
     context.user_data.clear()
