@@ -6,6 +6,14 @@ from oauth2client.service_account import ServiceAccountCredentials
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 
+# 🔹 Configurar el bot de Telegram
+TOKEN = os.getenv("TOKEN")  # Asegúrate de que está en las variables de entorno
+
+if not TOKEN:
+    raise ValueError("❌ ERROR: No se encontró el TOKEN de Telegram en las variables de entorno.")
+
+app = Application.builder().token(TOKEN).build()
+
 # 🔹 Conectar con Google Sheets
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds_json = json.loads(os.getenv("GOOGLE_CREDENTIALS"))
