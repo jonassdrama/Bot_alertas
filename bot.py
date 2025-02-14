@@ -27,10 +27,11 @@ IDIOMAS = [["🇪🇸 Español", "🇬🇧 English"]]
 SERVICIOS_ESP = [["📢 Servicio 1 mes - $20"], ["📢 Servicio 1 año - $100"], ["🎥 Video personalizado - $30"]]
 SERVICIOS_ENG = [["📢 1-month service - $20"], ["📢 1-year service - $100"], ["🎥 Custom video - $30"]]
 
-# 🔹 Mostrar botón "Empezar" automáticamente
+# 🔹 Mostrar botón "Empezar" automáticamente al recibir cualquier mensaje
 async def mostrar_boton_empezar(update: Update, context: CallbackContext) -> None:
-    keyboard = ReplyKeyboardMarkup([["🚀 Empezar"]], one_time_keyboard=True, resize_keyboard=True)
-    await update.message.reply_text("¡Bienvenido! / Welcome! 👋", reply_markup=keyboard)
+    if update.message.text and update.message.text not in ["🚀 Empezar", "🇪🇸 Español", "🇬🇧 English"]:
+        keyboard = ReplyKeyboardMarkup([["🚀 Empezar"]], one_time_keyboard=True, resize_keyboard=True)
+        await update.message.reply_text("¡Bienvenido! / Welcome! 👋", reply_markup=keyboard)
 
 # 🔹 Manejar "Empezar"
 async def empezar(update: Update, context: CallbackContext) -> None:
@@ -81,7 +82,7 @@ async def manejar_respuesta_usuario(update: Update, context: CallbackContext) ->
 
     if estado == "esperando_equipo":
         context.user_data["equipo"] = update.message.text
-        await registrar_peticion(update, context)
+        await registrar_peticion(update, context)  # Guardar directamente la petición
 
     elif estado == "esperando_mensaje":
         context.user_data["mensaje"] = update.message.text
@@ -118,16 +119,17 @@ async def registrar_peticion(update: Update, context: CallbackContext) -> None:
     context.user_data.clear()
 
 # 🔹 Configurar manejadores
-app.add_handler(MessageHandler(filters.ALL, mostrar_boton_empezar))  # Muestra "Empezar" automáticamente
 app.add_handler(MessageHandler(filters.Text(["🚀 Empezar"]), empezar))
 app.add_handler(MessageHandler(filters.Text(["🇪🇸 Español", "🇬🇧 English"]), seleccionar_idioma))
 app.add_handler(MessageHandler(filters.Text(["📢 Servicio 1 mes - $20", "📢 Servicio 1 año - $100", "🎥 Video personalizado - $30",
                                              "📢 1-month service - $20", "📢 1-year service - $100", "🎥 Custom video - $30"]),
                                manejar_respuesta))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, manejar_respuesta_usuario))
+app.add_handler(MessageHandler(filters.ALL, mostrar_boton_empezar))  # Muestra "Empezar" solo si el usuario escribe algo fuera del flujo
 
 # 🔹 Iniciar bot
 app.run_polling()
+
 
 
 
