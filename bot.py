@@ -63,12 +63,14 @@ async def manejar_respuesta(update: Update, context: CallbackContext) -> None:
     if idioma == "🇪🇸 Español":
         if "Servicio" in opcion:
             mensaje = "⚽ ¿Cuál es tu equipo favorito?"
+            context.user_data["estado"] = "esperando_equipo"
         elif "Video personalizado" in opcion:
             mensaje = "🎥 Escribe el mensaje que quieres en el video"
             context.user_data["estado"] = "esperando_mensaje"
     else:
         if "service" in opcion:
             mensaje = "⚽ What is your favorite team?"
+            context.user_data["estado"] = "esperando_equipo"
         elif "Custom video" in opcion:
             mensaje = "🎥 Write the message you want in the video"
             context.user_data["estado"] = "esperando_mensaje"
@@ -121,25 +123,27 @@ async def responder(update: Update, context: CallbackContext) -> None:
     except Exception as e:
         await update.message.reply_text(f"❌ Error al enviar respuesta: {e}")
 
-# 🔹 REENVIAR RESPUESTAS DE USUARIOS AL ADMIN
+# 🔹 REENVIAR RESPUESTAS DE USUARIOS AL ADMIN (IGNORA EL FLUJO AUTOMÁTICO)
 async def reenviar_respuesta(update: Update, context: CallbackContext) -> None:
     user_id = update.message.chat.id
     username = update.message.chat.username or f"ID: {user_id}"
 
-    if update.message.text:
+    # Solo reenviar si el mensaje NO es parte del flujo automatizado
+    if user_id != ADMIN_ID and " - " not in update.message.text:
         mensaje_admin = f"📩 *Nueva respuesta de un usuario*\n👤 Usuario: {username}\n🆔 ID: {user_id}\n💬 Mensaje: {update.message.text}"
         await context.bot.send_message(chat_id=ADMIN_ID, text=mensaje_admin, parse_mode="Markdown")
 
 # 🔹 CONFIGURAR MANEJADORES
 app.add_handler(CommandHandler("enviar", enviar))
 app.add_handler(CommandHandler("responder", responder))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reenviar_respuesta))
 app.add_handler(MessageHandler(filters.Text(["🚀 Empezar"]), empezar))
 app.add_handler(MessageHandler(filters.Text(["🇪🇸 Español", "🇬🇧 English"]), seleccionar_idioma))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, manejar_respuesta))
 app.add_handler(MessageHandler(filters.ALL, mostrar_boton_empezar))
 
 # 🔹 INICIAR EL BOT
 app.run_polling()
+
 
 
 
