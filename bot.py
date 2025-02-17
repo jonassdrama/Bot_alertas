@@ -89,6 +89,7 @@ async def manejar_respuesta_usuario(update: Update, context: CallbackContext) ->
 
     if estado == "esperando_equipo":
         context.user_data["equipo"] = update.message.text
+        context.user_data["estado"] = None  # Reset estado
         await registrar_peticion(update, context)
 
     elif estado == "esperando_mensaje":
@@ -99,6 +100,7 @@ async def manejar_respuesta_usuario(update: Update, context: CallbackContext) ->
 
     elif estado == "esperando_servicio":
         context.user_data["servicio"] = update.message.text
+        context.user_data["estado"] = None  # Reset estado
         await registrar_peticion(update, context)
 
 # 🔹 Registrar en Google Sheets
@@ -137,6 +139,7 @@ async def enviar(update: Update, context: CallbackContext) -> None:
     await context.bot.send_message(chat_id=chat_id, text=mensaje)
 
 # 🔹 Configurar manejadores
+app.add_handler(CommandHandler("start", start))
 app.add_handler(MessageHandler(filters.Text(["🚀 Empezar"]), empezar))
 app.add_handler(MessageHandler(filters.Text(["🇪🇸 Español", "🇬🇧 English"]), seleccionar_idioma))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, manejar_respuesta_usuario))
@@ -146,6 +149,7 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reenviar_respues
 
 # 🔹 Iniciar bot
 app.run_polling()
+
 
 
 
