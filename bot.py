@@ -8,7 +8,6 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 
 # 🔹 CONFIGURACIÓN DEL BOT
 TOKEN = os.getenv("TOKEN")
-ADMIN_ID = 1570729026  # ⚠️ Reemplaza con tu ID de Telegram
 
 if not TOKEN:
     raise ValueError("❌ ERROR: No se encontró el TOKEN de Telegram en las variables de entorno.")
@@ -77,72 +76,57 @@ async def manejar_respuesta(update: Update, context: CallbackContext) -> None:
 
     await update.message.reply_text(mensaje)
 
-# 🔹 REGISTRAR PETICIONES EN GOOGLE SHEETS
+# 🔹 MANEJAR RESPUESTAS DEL USUARIO
+async def manejar_respuesta_usuario(update: Update, context: CallbackContext) -> None:
+    estado = context.user_data.get("estado")
+    idioma = context.user_data.get("idioma", "🇪🇸 Español")
+
+    if estado == "esperando_equipo":
+        context.user_data["equipo"] = update.message.text
+        await registrar_peticion(update, context)
+
+    elif estado == "esperando_mensaje":
+        context.user_data["mensaje"] = update.message.text
+        if idioma == "🇪🇸 Español":
+            mensaje = "🎟️ ¿El video es para ti o para un amigo?"
+        else:
+            mensaje = "🎟️ Is the video for you or a friend?"
+        context.user_data["estado"] = "esperando_servicio"
+        await update.message.reply_text(mensaje)
+
+    elif estado == "esperando_servicio":
+        context.user_data["servicio"] = update.message.text
+        await registrar_peticion(update, context)
+
+# 🔹 REGISTRAR PETICIÓN EN GOOGLE SHEETS
 async def registrar_peticion(update: Update, context: CallbackContext) -> None:
     usuario = update.message.chat.username or update.message.chat.id
     opcion = context.user_data.get("opcion", "N/A")
     equipo = context.user_data.get("equipo", "N/A")
+    servicio = context.user_data.get("servicio", "N/A")
     mensaje = context.user_data.get("mensaje", "N/A")
     fecha = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    sheet.append_row([usuario, opcion, equipo, mensaje, fecha])
+    sheet.append_row([usuario, opcion, equipo, servicio, mensaje, fecha])
 
     idioma = context.user_data.get("idioma", "🇪🇸 Español")
-    mensaje_final = "✅ Petición registrada. Nos pondremos en contacto contigo." if idioma == "🇪🇸 Español" else "✅ Request registered. We will contact you."
+    mensaje_final = "✅ Petición registrada. Nos pondremos en contacto contigo para completar el pago." if idioma == "🇪🇸 Español" else "✅ Request registered. We will contact you to complete the payment."
 
     await update.message.reply_text(mensaje_final)
     context.user_data.clear()
 
-# 🔹 ENVIAR MENSAJE MANUALMENTE A UN USUARIO
-async def enviar(update: Update, context: CallbackContext) -> None:
-    if len(context.args) < 2:
-        await update.message.reply_text("⚠️ Uso correcto: `/enviar ID mensaje`")
-        return
-
-    chat_id = context.args[0]
-    mensaje = " ".join(context.args[1:])
-
-    try:
-        await context.bot.send_message(chat_id=chat_id, text=mensaje)
-        await update.message.reply_text(f"✅ Mensaje enviado a {chat_id}.")
-    except Exception as e:
-        await update.message.reply_text(f"❌ Error al enviar mensaje: {e}")
-
-# 🔹 RESPONDER A UN USUARIO
-async def responder(update: Update, context: CallbackContext) -> None:
-    if len(context.args) < 2:
-        await update.message.reply_text("⚠️ Uso correcto: `/responder ID mensaje`")
-        return
-
-    chat_id = context.args[0]
-    mensaje = " ".join(context.args[1:])
-
-    try:
-        await context.bot.send_message(chat_id=chat_id, text=mensaje)
-        await update.message.reply_text(f"✅ Respuesta enviada a {chat_id}.")
-    except Exception as e:
-        await update.message.reply_text(f"❌ Error al enviar respuesta: {e}")
-
-# 🔹 REENVIAR MENSAJES SOLO SI NO SON PARTE DEL FLUJO
-async def reenviar_respuesta(update: Update, context: CallbackContext) -> None:
-    user_id = update.message.chat.id
-    username = update.message.chat.username or f"ID: {user_id}"
-
-    # Si es un mensaje del flujo (botón, selección de idioma, opciones de servicio), NO lo reenviamos
-    if update.message.text in ["🚀 Empezar", "🇪🇸 Español", "🇬🇧 English", "📢 Servicio 1 mes - $20", "📢 Servicio 1 año - $100", "🎥 Video personalizado - $30", "📢 1-month service - $20", "📢 1-year service - $100", "🎥 Custom video - $30"]:
-        return
-
-    mensaje_admin = f"📩 *Nueva respuesta de un usuario*\n👤 Usuario: {username}\n🆔 ID: {user_id}\n💬 Mensaje: {update.message.text}"
-    await context.bot.send_message(chat_id=ADMIN_ID, text=mensaje_admin, parse_mode="Markdown")
-
 # 🔹 CONFIGURAR MANEJADORES
-app.add_handler(CommandHandler("enviar", enviar))
-app.add_handler(CommandHandler("responder", responder))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, manejar_respuesta))
-app.add_handler(MessageHandler(filters.ALL, mostrar_boton_empezar))
+app.add_handler(MessageHandler(filters.Text(["🚀 Empezar"]), empezar))
+app.add_handler(MessageHandler(filters.Text(["🇪🇸 Español", "🇬🇧 English"]), seleccionar_idioma))
+app.add_handler(MessageHandler(filters.Text(["📢 Servicio 1 mes - $20", "📢 Servicio 1 año - $100", "🎥 Video personalizado - $30",
+                                             "📢 1-month service - $20", "📢 1-year service - $100", "🎥 Custom video - $30"]),
+                               manejar_respuesta))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, manejar_respuesta_usuario))
+app.add_handler(MessageHandler(filters.ALL, mostrar_boton_empezar))  # Muestra "Empezar" solo si el usuario escribe algo fuera del flujo
 
 # 🔹 INICIAR EL BOT
 app.run_polling()
+
 
 
 
