@@ -131,6 +131,15 @@ async def enviar(update: Update, context: CallbackContext) -> None:
     except Exception as e:
         await update.message.reply_text(f"❌ Error al enviar mensaje: {e}")
 
+# 🔹 RECIBIR RESPUESTAS DEL USUARIO Y ENVIARLAS AL ADMIN
+async def reenviar_respuesta(update: Update, context: CallbackContext) -> None:
+    user_id = update.message.chat.id
+    username = update.message.chat.username or f"ID: {user_id}"
+
+    if update.message.text:
+        mensaje_admin = f"📩 *Nueva respuesta de un usuario*\n👤 Usuario: {username}\n🆔 ID: {user_id}\n💬 Mensaje: {update.message.text}"
+        await context.bot.send_message(chat_id=ADMIN_ID, text=mensaje_admin, parse_mode="Markdown")
+
 # 🔹 RESPONDER AL USUARIO DESDE EL ADMIN
 async def responder(update: Update, context: CallbackContext) -> None:
     if len(context.args) < 2:
@@ -147,18 +156,13 @@ async def responder(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text(f"❌ Error al enviar respuesta: {e}")
 
 # 🔹 CONFIGURAR MANEJADORES
-app.add_handler(MessageHandler(filters.Text(["🚀 Empezar"]), empezar))
-app.add_handler(MessageHandler(filters.Text(["🇪🇸 Español", "🇬🇧 English"]), seleccionar_idioma))
-app.add_handler(MessageHandler(filters.Text(["📢 Servicio 1 mes - $20", "📢 Servicio 1 año - $100", "🎥 Video personalizado - $30",
-                                             "📢 1-month service - $20", "📢 1-year service - $100", "🎥 Custom video - $30"]),
-                               manejar_respuesta))
-app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, manejar_respuesta_usuario))
 app.add_handler(CommandHandler("enviar", enviar))
 app.add_handler(CommandHandler("responder", responder))
-app.add_handler(MessageHandler(filters.ALL, mostrar_boton_empezar))  
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, reenviar_respuesta))
 
 # 🔹 INICIAR EL BOT
 app.run_polling()
+
 
 
 
