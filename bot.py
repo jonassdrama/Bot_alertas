@@ -32,9 +32,8 @@ SERVICIOS_ENG = [["📢 1-month service - $20"], ["📢 1-year service - $100"],
 
 # 🔹 Mostrar botón "Empezar" automáticamente
 async def mostrar_boton_empezar(update: Update, context: CallbackContext) -> None:
-    if update.message.text and update.message.text not in ["🚀 Empezar", "🇪🇸 Español", "🇬🇧 English"]:
-        keyboard = ReplyKeyboardMarkup([["🚀 Empezar"]], one_time_keyboard=True, resize_keyboard=True)
-        await update.message.reply_text("¡Bienvenido! / Welcome! 👋", reply_markup=keyboard)
+    keyboard = ReplyKeyboardMarkup([["🚀 Empezar"]], one_time_keyboard=True, resize_keyboard=True)
+    await update.message.reply_text("¡Bienvenido! / Welcome! 👋", reply_markup=keyboard)
 
 # 🔹 Manejar "Empezar"
 async def empezar(update: Update, context: CallbackContext) -> None:
@@ -45,7 +44,7 @@ async def empezar(update: Update, context: CallbackContext) -> None:
 async def seleccionar_idioma(update: Update, context: CallbackContext) -> None:
     idioma = update.message.text
     context.user_data["idioma"] = idioma
-    
+
     if idioma == "🇪🇸 Español":
         mensaje = "📢 Elige una opción de alertas deportivas:"
         keyboard = ReplyKeyboardMarkup(SERVICIOS_ESP, one_time_keyboard=True, resize_keyboard=True)
@@ -60,27 +59,35 @@ async def manejar_respuesta(update: Update, context: CallbackContext) -> None:
     opcion = update.message.text
     context.user_data["opcion"] = opcion
     idioma = context.user_data.get("idioma", "🇪🇸 Español")
-    
-    if idioma == "🇪🇸 Español":
-        mensaje = "⚽ ¿Cuál es tu equipo favorito?" if "Servicio" in opcion else "🎥 Escribe el mensaje que quieres en el video"
-    else:
-        mensaje = "⚽ What is your favorite team?" if "service" in opcion else "🎥 Write the message you want in the video"
 
-    context.user_data["estado"] = "esperando_equipo" if "Servicio" in opcion or "service" in opcion else "esperando_mensaje"
+    if idioma == "🇪🇸 Español":
+        if "Servicio" in opcion:
+            mensaje = "⚽ ¿Cuál es tu equipo favorito?"
+            context.user_data["estado"] = "esperando_equipo"
+        elif "Video personalizado" in opcion:
+            mensaje = "🎥 Escribe el mensaje que quieres en el video"
+            context.user_data["estado"] = "esperando_mensaje"
+    else:
+        if "service" in opcion:
+            mensaje = "⚽ What is your favorite team?"
+            context.user_data["estado"] = "esperando_equipo"
+        elif "Custom video" in opcion:
+            mensaje = "🎥 Write the message you want in the video"
+            context.user_data["estado"] = "esperando_mensaje"
+
     await update.message.reply_text(mensaje)
 
-# 🔹 Manejar respuestas de usuario según el estado
+# 🔹 Manejar respuestas del usuario
 async def manejar_respuesta_usuario(update: Update, context: CallbackContext) -> None:
     estado = context.user_data.get("estado")
-    idioma = context.user_data.get("idioma", "🇪🇸 Español")
-
+    
     if estado == "esperando_equipo":
         context.user_data["equipo"] = update.message.text
         await registrar_peticion(update, context)
 
     elif estado == "esperando_mensaje":
         context.user_data["mensaje"] = update.message.text
-        mensaje = "🎟️ ¿El video es para ti o para un amigo?" if idioma == "🇪🇸 Español" else "🎟️ Is the video for you or a friend?"
+        mensaje = "🎟️ ¿El video es para ti o para un amigo?"
         context.user_data["estado"] = "esperando_servicio"
         await update.message.reply_text(mensaje)
 
@@ -99,8 +106,7 @@ async def registrar_peticion(update: Update, context: CallbackContext) -> None:
 
     sheet.append_row([usuario, opcion, equipo, servicio, mensaje, fecha])
 
-    mensaje_final = "✅ Petición registrada. Nos pondremos en contacto contigo para completar el pago." if context.user_data.get("idioma") == "🇪🇸 Español" else "✅ Request registered. We will contact you to complete the payment."
-    await update.message.reply_text(mensaje_final)
+    await update.message.reply_text("✅ Petición registrada.")
 
     context.user_data.clear()
 
@@ -121,10 +127,9 @@ async def enviar(update: Update, context: CallbackContext) -> None:
 async def reenviar_respuesta(update: Update, context: CallbackContext) -> None:
     user_id = update.message.chat.id
     username = update.message.chat.username or f"ID: {user_id}"
-    mensaje = update.message.text or "[Mensaje no compatible]"
 
-    if user_id != ADMIN_ID:  # Evitar que el admin reciba sus propios mensajes
-        mensaje_admin = f"📩 *Nueva respuesta*\n👤 Usuario: {username}\n🆔 ID: {user_id}\n💬 {mensaje}"
+    if user_id != ADMIN_ID:  
+        mensaje_admin = f"📩 *Nueva respuesta*\n👤 Usuario: {username}\n🆔 ID: {user_id}\n💬 {update.message.text}"
         await context.bot.send_message(chat_id=ADMIN_ID, text=mensaje_admin, parse_mode="Markdown")
 
 # 🔹 Responder al usuario
@@ -141,6 +146,7 @@ async def responder(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text(f"❌ Error al enviar respuesta: {e}")
 
 # 🔹 Configurar manejadores
+app.add_handler(CommandHandler("start", empezar))
 app.add_handler(CommandHandler("enviar", enviar))
 app.add_handler(CommandHandler("responder", responder))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, manejar_respuesta_usuario))
@@ -148,6 +154,7 @@ app.add_handler(MessageHandler(filters.ALL, mostrar_boton_empezar))
 
 # 🔹 Iniciar bot
 app.run_polling()
+
 
 
 
