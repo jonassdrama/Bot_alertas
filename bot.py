@@ -6,8 +6,10 @@ from oauth2client.service_account import ServiceAccountCredentials
 from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 
-# 🔹 Configuración del bot de Telegram
+# 🔹 Configurar el bot de Telegram
 TOKEN = os.getenv("TOKEN")
+ADMIN_ID = 1570729026  # ⚠️ Reemplaza con tu ID de Telegram
+
 if not TOKEN:
     raise ValueError("❌ ERROR: No se encontró el TOKEN de Telegram en las variables de entorno.")
 
@@ -23,26 +25,12 @@ client = gspread.authorize(creds)
 SHEET_NAME = "1I6zyDy7N1vqOrq_2b6MFxL7ak8M8_FZpm0Q6cw-rkpc"
 sheet = client.open_by_key(SHEET_NAME).sheet1
 
-# 🔹 Opciones de idioma y servicios
+# 🔹 Opciones
 IDIOMAS = [["🇪🇸 Español", "🇬🇧 English"]]
+SERVICIOS_ESP = [["📢 Servicio 1 mes - $20"], ["📢 Servicio 1 año - $100"], ["🎥 Video personalizado - $30"]]
+SERVICIOS_ENG = [["📢 1-month service - $20"], ["📢 1-year service - $100"], ["🎥 Custom video - $30"]]
 
-SERVICIOS_ESP = [
-    ["📢 Servicio 1 mes - $20"],
-    ["📢 Servicio 1 año - $100"],
-    ["🎥 Video personalizado - $30"]
-]
-
-SERVICIOS_ENG = [
-    ["📢 1-month service - $20"],
-    ["📢 1-year service - $100"],
-    ["🎥 Custom video - $30"]
-]
-
-# ───────────────────────────────────────────────────── #
-#                        FLUJO                          #
-# ───────────────────────────────────────────────────── #
-
-# 🔹 Mostrar botón "Empezar" automáticamente al recibir cualquier mensaje
+# 🔹 Mostrar botón "Empezar" automáticamente
 async def mostrar_boton_empezar(update: Update, context: CallbackContext) -> None:
     if update.message.text and update.message.text not in ["🚀 Empezar", "🇪🇸 Español", "🇬🇧 English"]:
         keyboard = ReplyKeyboardMarkup([["🚀 Empezar"]], one_time_keyboard=True, resize_keyboard=True)
@@ -67,20 +55,18 @@ async def seleccionar_idioma(update: Update, context: CallbackContext) -> None:
 
     await update.message.reply_text(mensaje, reply_markup=keyboard)
 
-# 🔹 Manejar selección de servicio y preguntar en el idioma correcto
+# 🔹 Manejar selección de servicio
 async def manejar_respuesta(update: Update, context: CallbackContext) -> None:
     opcion = update.message.text
     context.user_data["opcion"] = opcion
     idioma = context.user_data.get("idioma", "🇪🇸 Español")
     
-    if "Servicio" in opcion or "service" in opcion:
-        mensaje = "⚽ ¿Cuál es tu equipo favorito?" if idioma == "🇪🇸 Español" else "⚽ What is your favorite team?"
-        context.user_data["estado"] = "esperando_equipo"
-    
-    elif "Video personalizado" in opcion or "Custom video" in opcion:
-        mensaje = "🎥 Escribe el mensaje que quieres en el video" if idioma == "🇪🇸 Español" else "🎥 Write the message you want in the video"
-        context.user_data["estado"] = "esperando_mensaje"
+    if idioma == "🇪🇸 Español":
+        mensaje = "⚽ ¿Cuál es tu equipo favorito?" if "Servicio" in opcion else "🎥 Escribe el mensaje que quieres en el video"
+    else:
+        mensaje = "⚽ What is your favorite team?" if "service" in opcion else "🎥 Write the message you want in the video"
 
+    context.user_data["estado"] = "esperando_equipo" if "Servicio" in opcion or "service" in opcion else "esperando_mensaje"
     await update.message.reply_text(mensaje)
 
 # 🔹 Manejar respuestas de usuario según el estado
@@ -113,32 +99,56 @@ async def registrar_peticion(update: Update, context: CallbackContext) -> None:
 
     sheet.append_row([usuario, opcion, equipo, servicio, mensaje, fecha])
 
-    idioma = context.user_data.get("idioma", "🇪🇸 Español")
-    mensaje_final = "✅ Petición registrada. Nos pondremos en contacto contigo para completar el pago." if idioma == "🇪🇸 Español" else "✅ Request registered. We will contact you to complete the payment."
-
+    mensaje_final = "✅ Petición registrada. Nos pondremos en contacto contigo para completar el pago." if context.user_data.get("idioma") == "🇪🇸 Español" else "✅ Request registered. We will contact you to complete the payment."
     await update.message.reply_text(mensaje_final)
+
     context.user_data.clear()
 
-# ───────────────────────────────────────────────────── #
-#                CONFIGURAR MANEJADORES                 #
-# ───────────────────────────────────────────────────── #
+# 🔹 Enviar mensaje manualmente a un usuario
+async def enviar(update: Update, context: CallbackContext) -> None:
+    if len(context.args) < 2:
+        await update.message.reply_text("⚠️ Uso correcto: `/enviar ID mensaje`")
+        return
 
-app.add_handler(MessageHandler(filters.Text(["🚀 Empezar"]), empezar))
-app.add_handler(MessageHandler(filters.Text(["🇪🇸 Español", "🇬🇧 English"]), seleccionar_idioma))
-app.add_handler(MessageHandler(
-    filters.Text([
-        "📢 Servicio 1 mes - $20", "📢 Servicio 1 año - $100", "🎥 Video personalizado - $30",
-        "📢 1-month service - $20", "📢 1-year service - $100", "🎥 Custom video - $30"
-    ]), manejar_respuesta
-))
+    chat_id, mensaje = context.args[0], " ".join(context.args[1:])
+    try:
+        await context.bot.send_message(chat_id=chat_id, text=mensaje)
+        await update.message.reply_text(f"✅ Mensaje enviado a {chat_id}.")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error al enviar mensaje: {e}")
+
+# 🔹 Reenviar respuestas al admin
+async def reenviar_respuesta(update: Update, context: CallbackContext) -> None:
+    user_id = update.message.chat.id
+    username = update.message.chat.username or f"ID: {user_id}"
+    mensaje = update.message.text or "[Mensaje no compatible]"
+
+    if user_id != ADMIN_ID:  # Evitar que el admin reciba sus propios mensajes
+        mensaje_admin = f"📩 *Nueva respuesta*\n👤 Usuario: {username}\n🆔 ID: {user_id}\n💬 {mensaje}"
+        await context.bot.send_message(chat_id=ADMIN_ID, text=mensaje_admin, parse_mode="Markdown")
+
+# 🔹 Responder al usuario
+async def responder(update: Update, context: CallbackContext) -> None:
+    if len(context.args) < 2:
+        await update.message.reply_text("⚠️ Uso correcto: `/responder ID mensaje`")
+        return
+
+    chat_id, mensaje = context.args[0], " ".join(context.args[1:])
+    try:
+        await context.bot.send_message(chat_id=chat_id, text=mensaje)
+        await update.message.reply_text(f"✅ Respuesta enviada a {chat_id}.")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error al enviar respuesta: {e}")
+
+# 🔹 Configurar manejadores
+app.add_handler(CommandHandler("enviar", enviar))
+app.add_handler(CommandHandler("responder", responder))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, manejar_respuesta_usuario))
-app.add_handler(MessageHandler(filters.ALL, mostrar_boton_empezar))  # Mostrar "Empezar" si el usuario escribe fuera del flujo
+app.add_handler(MessageHandler(filters.ALL, mostrar_boton_empezar))
 
-# ───────────────────────────────────────────────────── #
-#                     INICIAR BOT                       #
-# ───────────────────────────────────────────────────── #
-
+# 🔹 Iniciar bot
 app.run_polling()
+
 
 
 
