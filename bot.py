@@ -8,6 +8,7 @@ from telegram.ext import Application, CommandHandler, MessageHandler, filters, C
 
 # 🔹 CONFIGURACIÓN DEL BOT
 TOKEN = os.getenv("TOKEN")
+ADMIN_ID = 1570729026  # ⚠️ REEMPLAZA con tu ID de Telegram
 
 if not TOKEN:
     raise ValueError("❌ ERROR: No se encontró el TOKEN de Telegram en las variables de entorno.")
@@ -115,6 +116,36 @@ async def registrar_peticion(update: Update, context: CallbackContext) -> None:
     await update.message.reply_text(mensaje_final)
     context.user_data.clear()
 
+# 🔹 ENVIAR MENSAJES MANUALMENTE COMO ADMIN
+async def enviar(update: Update, context: CallbackContext) -> None:
+    if len(context.args) < 2:
+        await update.message.reply_text("⚠️ Uso correcto: `/enviar ID mensaje`")
+        return
+
+    chat_id = context.args[0]
+    mensaje = " ".join(context.args[1:])
+
+    try:
+        await context.bot.send_message(chat_id=chat_id, text=mensaje)
+        await update.message.reply_text(f"✅ Mensaje enviado a {chat_id}.")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error al enviar mensaje: {e}")
+
+# 🔹 RESPONDER AL USUARIO DESDE EL ADMIN
+async def responder(update: Update, context: CallbackContext) -> None:
+    if len(context.args) < 2:
+        await update.message.reply_text("⚠️ Uso correcto: `/responder ID mensaje`")
+        return
+
+    chat_id = context.args[0]
+    mensaje = " ".join(context.args[1:])
+
+    try:
+        await context.bot.send_message(chat_id=chat_id, text=mensaje)
+        await update.message.reply_text(f"✅ Respuesta enviada a {chat_id}.")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error al enviar respuesta: {e}")
+
 # 🔹 CONFIGURAR MANEJADORES
 app.add_handler(MessageHandler(filters.Text(["🚀 Empezar"]), empezar))
 app.add_handler(MessageHandler(filters.Text(["🇪🇸 Español", "🇬🇧 English"]), seleccionar_idioma))
@@ -122,10 +153,13 @@ app.add_handler(MessageHandler(filters.Text(["📢 Servicio 1 mes - $20", "📢 
                                              "📢 1-month service - $20", "📢 1-year service - $100", "🎥 Custom video - $30"]),
                                manejar_respuesta))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, manejar_respuesta_usuario))
-app.add_handler(MessageHandler(filters.ALL, mostrar_boton_empezar))  # Muestra "Empezar" solo si el usuario escribe algo fuera del flujo
+app.add_handler(CommandHandler("enviar", enviar))
+app.add_handler(CommandHandler("responder", responder))
+app.add_handler(MessageHandler(filters.ALL, mostrar_boton_empezar))  
 
 # 🔹 INICIAR EL BOT
 app.run_polling()
+
 
 
 
