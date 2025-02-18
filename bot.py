@@ -153,7 +153,14 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, manejar_respuest
 app.add_handler(MessageHandler(filters.ALL, mostrar_boton_empezar))
 
 # 🔹 Iniciar bot
-app.run_polling()
+PORT = int(os.environ.get("PORT", 5000))  # Puerto para Render
+
+app.run_webhook(
+    listen="0.0.0.0",
+    port=PORT,
+    url_path=TOKEN,
+    webhook_url=f"https://{os.environ.get('RENDER_EXTERNAL_HOSTNAME')}/{TOKEN}"
+)
 
 
 
